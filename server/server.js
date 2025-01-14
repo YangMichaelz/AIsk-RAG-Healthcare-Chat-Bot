@@ -37,7 +37,7 @@ const text_splitter = new RecursiveCharacterTextSplitter({
 
 const ollama = new ChatOllama({
   model: "llama3.1:latest",
-  temperature: 0.2,
+  temperature: 0.35,
   stop: [".", "?"],
 });
 
@@ -95,14 +95,18 @@ let callOllama = async (prompt, promptTemplate, chatHistory, context) => {
  * @returns {string} The simplified prompt
  */
 let simplifyPrompt = async (userPrompt) => {
-  const promptTemp = ChatPromptTemplate.fromTemplate(PROMPT_TO_SEARCH_PROMPT);
-  const chain = promptTemp.pipe(ollama);
+  if (userPrompt.length >= 20) {
+    const promptTemp = ChatPromptTemplate.fromTemplate(PROMPT_TO_SEARCH_PROMPT);
+    const chain = promptTemp.pipe(ollama);
 
-  const searchPrompt = await chain.invoke({
-    prompt: userPrompt,
-    convo_history: promptHistory,
-  });
-  return searchPrompt;
+    const searchPrompt = await chain.invoke({
+      prompt: userPrompt,
+      convo_history: promptHistory,
+    });
+    return searchPrompt;
+  } else {
+    return { content: userPrompt };
+  }
 };
 /**
  * Split metadata into small chunks and use vector embeddings and vector search to find top 5 relevant chunks
@@ -158,6 +162,7 @@ app.post("/api/chat", async (req, res) => {
     const userPrompt = messages[0].content;
 
     const searchPrompt = await simplifyPrompt(userPrompt);
+    console.log(searchPrompt);
 
     promptHistory.push(new HumanMessage(userPrompt));
     promptHistory.push(new AIMessage(searchPrompt.content));

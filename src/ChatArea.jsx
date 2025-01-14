@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from 'axios';
 
 function ChatArea(){
@@ -10,24 +10,26 @@ function ChatArea(){
       setPrompt(event.target.value);
   }
   async function fetch(){
-    setFlag(true);
-    setMessages(messages => [...messages, prompt]);
-    var sendAudio = new Audio("./src/assets/send.mp3");
-    sendAudio.play();
-    var promptToSend = prompt;
-    setPrompt("");
-    const response = await axios.post('http://localhost:3000/api/chat',{
-        messages: [{role: 'user', content: promptToSend}],
-    },
-    {headers: { 'Content-Type': 'application/json' }});
-    
-    const data = await response.data;
-    if(data != null){
-      setMessages(messages => [...messages, data.reply]);
+    if(prompt.trim() != ""){
+      setFlag(true);
+      setMessages(messages => [...messages, prompt]);
+      var sendAudio = new Audio("./src/assets/send.mp3");
+      sendAudio.play();
+      var promptToSend = prompt;
+      setPrompt("");
+      const response = await axios.post('http://localhost:3000/api/chat',{
+          messages: [{role: 'user', content: promptToSend}],
+      },
+      {headers: { 'Content-Type': 'application/json' }});
+      
+      const data = await response.data;
+      if(data != null){
+        setMessages(messages => [...messages, data.reply]);
+      }
+      setFlag(false);
+      var receiveAudio = new Audio("./src/assets/receive.mp3");
+      receiveAudio.play();
     }
-    setFlag(false);
-    var receiveAudio = new Audio("./src/assets/receive.mp3");
-    receiveAudio.play();
   }
 
     return(

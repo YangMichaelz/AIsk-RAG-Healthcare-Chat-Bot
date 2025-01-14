@@ -1,11 +1,19 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import Header from './Header'
 import ChatArea from './ChatArea'
+import { useEffect } from 'react';
 import './App.css'
 
 function App() {
+
+  useEffect(() => {
+    const unloadCallback = (event) => {
+      event.preventDefault();
+      return;
+    };
+  
+    window.addEventListener("beforeunload", unloadCallback);
+    return () => window.removeEventListener("beforeunload", unloadCallback);
+  }, []);
   return(
     <body>
       <div className="h-screen w-screen bg-gradient-to-r from-[#0f172a]  to-[#334155]">
