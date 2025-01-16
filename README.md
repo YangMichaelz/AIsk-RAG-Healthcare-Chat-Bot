@@ -5,6 +5,9 @@ AIsk is a RAG (Retrieval-Augmented Generation) based healthcare chatbot develope
 # How AIsk works
 ![Blank diagram](https://github.com/user-attachments/assets/928a26aa-be6f-49b5-aee4-9c282cefef3c)
 
+# Upcoming features/changes
+- The ability to save and load conversations with MongoDB and Google's OAuth 2.0.
+- Improved AI
 
 # The UI
 ![image](https://github.com/user-attachments/assets/18a006d2-30e8-4506-a65c-ea7c9a4f55a2)
