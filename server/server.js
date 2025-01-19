@@ -1,12 +1,13 @@
-import { PromptTemplate, ChatPromptTemplate } from "@langchain/core/prompts";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { ChatOllama } from "@langchain/ollama";
-import { TavilySearchAPIRetriever } from "@langchain/community/retrievers/tavily_search_api";
 import { Pinecone } from "@pinecone-database/pinecone";
 import express from "express";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import { AIMessage, HumanMessage } from "@langchain/core/messages";
+import { tavily } from "@tavily/core";
 import cors from "cors";
 import env from "dotenv";
+import { addUser, getUserConversations, saveConversation } from "./db.js";
 
 const app = express();
 const corsOptions = { origin: "http://localhost:5173" };
@@ -17,11 +18,9 @@ const pc = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY,
 });
 
-const tvly = new TavilySearchAPIRetriever({
+const tvly = tavily({
   apiKey: process.env.TAVILY_API_KEY,
-  maxResults: 1,
-  includeDomains: ["https://www.healthline.com/"],
-  includeRawContent: true,
+  includeMetadata: true,
 });
 
 const embedding_model = "multilingual-e5-large";
@@ -47,8 +46,7 @@ const promptHistory = [];
 const PROMPT_TEMPLATE = `You are a helpful medical assistant agent.Your role is to engage with users by discussing healthcare-related topics, primarily
 focusing on the symptoms they are experiencing. You should always provide the most likely diagnoses based on the symptoms, while acknowledging that there are other possibilities. 
 After suggesting possible causes, recommend steps for self-care or direct the user to appropriate healthcare professionals for deeper evaluation. Do not provide irrelevant information.
-If you do not have any information available, reply politely that you do not have the information available. if the prompt seems general enough, you may use 
-your own judgement. You MUST keep the response as concise as possible.
+If you do not have any information available, reply politely that you do not have the information available. You MUST keep the response as concise as possible.
 =====================================================================================================================================================================
 Context: {context}
 =====================================================================================================================================================================
@@ -57,16 +55,10 @@ Current conversation: {convo_history}
 User: {prompt}
 Assistant:`;
 
-const PROMPT_TO_SEARCH_PROMPT = `Your job is to convert any prompt into a short and concise prompt that is used for web browsing, while maintaining the context within the prompt.
-=====================================================================================================================================================================
-EXAMPLE:
-User: What are some of the symptoms of fever?
-Assistant: Fever symptoms
-User: What is the difference between type 2 diabetes and type 1 diabetes?
-Assistant: Type 1 diabetes vs type 2 diabetes
-=====================================================================================================================================================================
-Prompt history: {convo_history}
-
+const PROMPT_TO_SEARCH_PROMPT = `Your job is to convert any prompt into a short and concise prompt that is used for web browsing, while using the previous prompts for context.
+===============================================================================================================================================================================
+Context: {convo_history}
+===============================================================================================================================================================================
 User: {prompt}
 Assistant:`;
 
@@ -95,18 +87,14 @@ let callOllama = async (prompt, promptTemplate, chatHistory, context) => {
  * @returns {string} The simplified prompt
  */
 let simplifyPrompt = async (userPrompt) => {
-  if (userPrompt.length >= 20) {
-    const promptTemp = ChatPromptTemplate.fromTemplate(PROMPT_TO_SEARCH_PROMPT);
-    const chain = promptTemp.pipe(ollama);
+  const promptTemp = ChatPromptTemplate.fromTemplate(PROMPT_TO_SEARCH_PROMPT);
+  const chain = promptTemp.pipe(ollama);
 
-    const searchPrompt = await chain.invoke({
-      prompt: userPrompt,
-      convo_history: promptHistory,
-    });
-    return searchPrompt;
-  } else {
-    return { content: userPrompt };
-  }
+  const searchPrompt = await chain.invoke({
+    prompt: userPrompt,
+    convo_history: promptHistory,
+  });
+  return searchPrompt;
 };
 /**
  * Split metadata into small chunks and use vector embeddings and vector search to find top 5 relevant chunks
@@ -115,7 +103,7 @@ let simplifyPrompt = async (userPrompt) => {
  * @returns {string} The context
  */
 let processData = async (searchResponse, userPrompt) => {
-  var chunks = text_splitter.splitText(searchResponse[0]["pageContent"]);
+  var chunks = text_splitter.splitText(searchResponse);
   var context = "";
   chunks = (await chunks).map((item, index) => ({
     id: index,
@@ -162,17 +150,25 @@ app.post("/api/chat", async (req, res) => {
     const userPrompt = messages[0].content;
 
     const searchPrompt = await simplifyPrompt(userPrompt);
-    console.log(searchPrompt);
 
     promptHistory.push(new HumanMessage(userPrompt));
     promptHistory.push(new AIMessage(searchPrompt.content));
 
-    const searchResponse = await tvly.invoke(searchPrompt.content);
-
+    const searchResultLink = await tvly.searchContext(searchPrompt.content, {
+      includeDomains: ["https://www.healthline.com/"],
+      maxResults: 1,
+    });
+    const parsed = JSON.parse(JSON.parse(searchResultLink));
+    const url = parsed[0]?.url;
+    const searchResponse = await tvly.extract([url]);
     var context = "";
-    if (searchResponse[0]?.["pageContent"] != null) {
-      context = await processData(searchResponse, userPrompt);
+    if (searchResponse.results[0]["rawContent"]) {
+      context = await processData(
+        searchResponse.results[0]["rawContent"],
+        userPrompt
+      );
     }
+    console.log(context);
 
     const response = await callOllama(
       userPrompt,
@@ -184,7 +180,46 @@ app.post("/api/chat", async (req, res) => {
     res.json({ reply: response.content });
   } catch (error) {
     console.error("Detailed error:", error);
-    res.status(500).json({ error: error.message });
+    res.json({ reply: "An error has occured, please try again" });
   }
 });
+
+app.post("/api/saveConversation", async (req, res) => {
+  const { body } = req.body;
+  const convName = body[0].ConversationName;
+  const convData = body[0].Conversation;
+  const userEmail = body[0].Email;
+  const flag = await saveConversation(convName, convData, userEmail);
+  if (flag) {
+    res.json({ reply: true });
+  } else {
+    res.json({ reply: false });
+  }
+});
+
+app.post("/api/loadMessages", async (req, res) => {
+  const { body } = await req.body;
+  const convName = body[0].ConversationName;
+  const userEmail = body[0].Email;
+  const conversations = await getUserConversations(userEmail);
+  for (let i = 0; i < conversations.length; i++) {}
+  const messages = conversations.get(convName);
+  if (messages) {
+    res.json({ messages });
+  } else {
+    console.log("Conversation does not exist");
+  }
+});
+
+app.post("/api/loadAllConversations", async (req, res) => {
+  const { body } = await req.body;
+  const userEmail = body[0].Email;
+  const conversations = await getUserConversations(userEmail);
+  if (conversations) {
+    res.json({ conversations });
+  } else {
+    console.log("No conversations available");
+  }
+});
+
 app.listen(3000, () => console.log("Server running on port 3000"));
