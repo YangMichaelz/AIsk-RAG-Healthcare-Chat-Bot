@@ -36,12 +36,12 @@ const text_splitter = new RecursiveCharacterTextSplitter({
 
 const ollama = new ChatOllama({
   model: "llama3.1:latest",
-  temperature: 0.35,
+  temperature: 0.45,
   stop: [".", "?"],
 });
 
-const chatHistory = [];
-const promptHistory = [];
+var chatHistory = [];
+var promptHistory = [];
 
 const PROMPT_TEMPLATE = `You are a helpful medical assistant agent.Your role is to engage with users by discussing healthcare-related topics, primarily
 focusing on the symptoms they are experiencing. You should always provide the most likely diagnoses based on the symptoms, while acknowledging that there are other possibilities. 
@@ -143,12 +143,12 @@ let processData = async (searchResponse, userPrompt) => {
   }
   return context;
 };
-
+// POST endpoint for chat functionality
 app.post("/api/chat", async (req, res) => {
   try {
     const { messages } = req.body;
     const userPrompt = messages[0].content;
-
+    console.log("received prompt: " + userPrompt);
     const searchPrompt = await simplifyPrompt(userPrompt);
 
     promptHistory.push(new HumanMessage(userPrompt));
@@ -168,7 +168,9 @@ app.post("/api/chat", async (req, res) => {
         userPrompt
       );
     }
-    console.log(context);
+    if (context != "") {
+      console.log("Context found: " + context);
+    }
 
     const response = await callOllama(
       userPrompt,
@@ -183,7 +185,7 @@ app.post("/api/chat", async (req, res) => {
     res.json({ reply: "An error has occured, please try again" });
   }
 });
-
+// POST endpoint for saving a conversation
 app.post("/api/saveConversation", async (req, res) => {
   const { body } = req.body;
   const convName = body[0].ConversationName;
@@ -196,13 +198,23 @@ app.post("/api/saveConversation", async (req, res) => {
     res.json({ reply: false });
   }
 });
-
+// POST endpoint for loading messages from mongoDB
 app.post("/api/loadMessages", async (req, res) => {
   const { body } = await req.body;
   const convName = body[0].ConversationName;
   const userEmail = body[0].Email;
   const conversations = await getUserConversations(userEmail);
-  for (let i = 0; i < conversations.length; i++) {}
+  const curConversation = conversations.get(convName).split("\0");
+  chatHistory = [];
+  promptHistory = [];
+  for (let i = 0; i < curConversation.length; i++) {
+    if (i % 2 == 0) {
+      chatHistory.push(new HumanMessage(curConversation[i]));
+      promptHistory.push(new HumanMessage(curConversation[i]));
+    } else {
+      chatHistory.push(new AIMessage(curConversation[i]));
+    }
+  }
   const messages = conversations.get(convName);
   if (messages) {
     res.json({ messages });
@@ -210,7 +222,7 @@ app.post("/api/loadMessages", async (req, res) => {
     console.log("Conversation does not exist");
   }
 });
-
+// POST endpoint for loading every saved conversation
 app.post("/api/loadAllConversations", async (req, res) => {
   const { body } = await req.body;
   const userEmail = body[0].Email;
@@ -219,6 +231,18 @@ app.post("/api/loadAllConversations", async (req, res) => {
     res.json({ conversations });
   } else {
     console.log("No conversations available");
+  }
+});
+// POST endpoint for adding new users to the DB
+app.post("/api/addUser", async (req, res) => {
+  const { body } = await req.body;
+  const userEmail = body[0].Email;
+  const username = body[0].Username;
+  const addedUserToDB = await addUser(userEmail, username);
+  if (addedUserToDB) {
+    res.json({ reply: true });
+  } else {
+    res.json({ reply: false });
   }
 });
 

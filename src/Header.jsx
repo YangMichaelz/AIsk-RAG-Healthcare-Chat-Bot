@@ -17,6 +17,7 @@ function Header() {
       googleLogout();
       localStorage.removeItem("email");
       localStorage.removeItem("username");
+      localStorage.removeItem("current_conversation");
       window.location.reload(false);
     }
     

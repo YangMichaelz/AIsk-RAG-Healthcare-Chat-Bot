@@ -20,6 +20,7 @@ function ChatArea(){
 
   const setConvoName = (event) =>{
     fetchMessages(event.target.value);
+    localStorage.setItem("current_conversation", event.target.value);
   }
 
   const fetchAllConversations = async () =>{
@@ -34,7 +35,7 @@ function ChatArea(){
       }
   }
 
-  const saveConversation = async () =>{
+  const saveNewConversation = async () =>{
     if(clientEmail!=""){
       var conversationInString = "";
       for(let i = 0; i < messages.length; i++){
@@ -49,7 +50,24 @@ function ChatArea(){
       }else{
         console.log("Failed to save conversation");
       }
+    }
   }
+  const saveCurConversation = async () =>{
+    if(clientEmail!=""){
+      var conversationInString = "";
+      for(let i = 0; i < messages.length; i++){
+        conversationInString+=(i==messages.length-1) ? messages[i] : messages[i]+"\0";
+      }
+      const response = await axios.post('http://localhost:3000/api/saveConversation', {
+          body: [{Email: clientEmail, ConversationName: localStorage.getItem("current_conversation"), Conversation: conversationInString}],
+      }, {headers: { 'Content-Type': 'application/json' }});
+
+      if(await response.data){
+        console.log("Saved!");
+      }else{
+        console.log("Failed to save conversation");
+      }
+    }
   }
 
   function setNewConvName(event){
@@ -98,9 +116,9 @@ function ChatArea(){
               <h1 className="text-2xl">Chats</h1>
               <p1 className="text-md">Saved conversations</p1>
               <div className="overflow-y-auto h-full">
-                  <ul class="list-disc rounded-l-md mt-10">
+                  <ul class="list-disc rounded-l-md mt-6">
                   {[...conversations.keys()].map((convName, i)=>(
-                      <li className="mt-3"><button className="text-left bg-white rounded-2xl md:p-2 sm:p-1 transition-all hover:bg-green-200" value={convName} onClick={setConvoName}>{convName}</button></li>
+                      <li className="mt-3"><button className="text-center w-full bg-slate-800 rounded-md text-white md:p-2 sm:p-1 transition-all hover:bg-green-200" value={convName} onClick={setConvoName}>{convName}</button></li>
                   ))}
                 </ul>    
               </div>
@@ -111,22 +129,28 @@ function ChatArea(){
                   <div className="flex flex-col items-center bg-white p-2 rounded-2xl">
                   <input
                       className="rounded h-auto p-1 text-black transition bg-slate-200 w-full" placeholder="Name of this conversation" onChange={setNewConvName} value={conversationName}/>
-                      <button className="text-left mt-3 bg-slate-200 text-sm rounded-2xl md:p-2 sm:p-1 transition-all hover:bg-green-200" onClick={saveConversation}>Save</button>
+                      <button className="text-left mt-3 bg-slate-200 text-sm rounded-2xl md:p-2 sm:p-1 transition-all hover:bg-green-200" onClick={saveNewConversation}>Save new</button>
+                      {localStorage.getItem("current_conversation") ? 
+                      <button className="text-left mt-3 bg-slate-200 text-sm rounded-2xl md:p-2 sm:p-1 transition-all hover:bg-green-200" onClick={saveCurConversation}>Save current</button>
+                      : <></>}
                   </div>
               </Popup>
               </div>
           </div>
         <div className="p-2 w-full">
-          <div className="bg-slate-700 justify-start flex rounded-t-2xl p-3">
-            <div>
-              <img src="./src/assets/doctor.png" alt="Avatar" class="rounded-full lg:w-16 sm:w-12 mr-3"/>
+          <div className="bg-slate-700 flex justify-between rounded-t-2xl p-3">
+            <div className="flex ">
+              <div>
+                <img src="./src/assets/doctor.png" alt="Avatar" class="rounded-full lg:w-16 sm:w-12 mr-3"/>
+              </div>
+              <div>
+              <h1 className="font-medium lg:text-2xl sm:text-lg text-white">
+                Assistant
+              </h1>
+              <p1 className="text-white lg:text-2xl sm:text-base">AI Chatbot</p1>
             </div>
-            <div>
-            <h1 className="font-medium lg:text-2xl sm:text-lg text-white">
-              Assistant
-            </h1>
-            <p1 className="text-white lg:text-2xl sm:text-base">AI Chatbot</p1>
-            </div>
+          </div>
+
           </div>
           <div className = "sm:min-h-[14rem] sm:max-h-[14rem] md:min-h-[32rem] md:max-h-[32rem] lg:min-h-[27rem] lg:max-h-[27rem]  overflow-y-auto bg-slate-200 p-4">
                   {messages.map((message, i)=>(

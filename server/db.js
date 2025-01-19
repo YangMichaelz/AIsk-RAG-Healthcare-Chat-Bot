@@ -29,6 +29,7 @@ export const addUser = async (newEmail, newUsername) => {
   const userExists = await UserDataModel.exists({ email: newEmail });
   if (userExists) {
     console.log("User already in database!");
+    return false;
   } else {
     const newUserData = new UserDataModel({
       email: newEmail,
@@ -39,6 +40,7 @@ export const addUser = async (newEmail, newUsername) => {
       .save()
       .then(() => console.log("Success!"))
       .catch((err) => console.log(err));
+    return true;
   }
 };
 
@@ -55,7 +57,7 @@ export const getUserConversations = async (clientEmail) => {
   const user = await getUserByEmail(clientEmail);
 
   if (user) {
-    if (user[0]["conversations"]) {
+    if (user[0]) {
       return user[0]["conversations"];
     }
   }
@@ -79,10 +81,3 @@ export const saveConversation = async (msgName, msg, email) => {
     }
   }
 };
-
-await addUser("relightings@gmail.com", "Relights");
-await saveConversation(
-  "Among us 2",
-  "Hi there.\n\nHi among us\n\nHow are you?\n\nAmong us...",
-  "relightings@gmail.com"
-);
