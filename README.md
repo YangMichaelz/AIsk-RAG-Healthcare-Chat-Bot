@@ -10,4 +10,4 @@ AIsk is a RAG (Retrieval-Augmented Generation) based healthcare chatbot develope
 - Improved AI
 
 # The UI
-![image](https://github.com/user-attachments/assets/18a006d2-30e8-4506-a65c-ea7c9a4f55a2)
+![Screenshot](https://github.com/user-attachments/assets/9461b0e1-ae87-4a97-b285-b4929c8a648e)
