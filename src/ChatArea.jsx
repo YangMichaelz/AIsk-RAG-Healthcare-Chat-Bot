@@ -127,33 +127,33 @@ function ChatArea(){
   }
 
     return(
-      <div className="w-full flex transition-all">
-            <div className="p-1 sm:h-[13rem] md:h-[26rem]">
-              <h1 className="text-2xl">Chats</h1>
-              <p1 className="text-md">Saved conversations</p1>
-              <div className="overflow-y-auto h-full">
-                  <ul class="list-disc rounded-l-md mt-6">
-                  {[...conversations.keys()].map((convName, i)=>(
-                      <li className="mt-3"><button className="text-center w-full bg-slate-800 rounded-md text-white md:p-2 sm:p-1 transition-all hover:bg-green-200" value={convName} onClick={setConvoName}>{convName}</button></li>
-                  ))}
-                </ul>    
-              </div>
-              <div className="mt-3">
-              <Popup
-              trigger={<button className=" bg-white text-sm rounded-2xl md:p-2 sm:p-1 transition-all hover:bg-green-200">Save current conversation</button>} 
-              position="top center">
-                  <div className="flex flex-col items-center bg-white p-2 rounded-2xl">
-                  <input
-                      className="rounded h-auto p-1 text-black transition bg-slate-200 w-full" placeholder="Name of this conversation" onChange={setNewConvName} value={conversationName}/>
-                      <button className="text-left mt-3 bg-slate-200 text-sm rounded-2xl md:p-2 sm:p-1 transition-all hover:bg-green-200" onClick={saveNewConversation}>Save new</button>
-                      {localStorage.getItem("current_conversation") ? 
-                      <button className="text-left mt-3 bg-slate-200 text-sm rounded-2xl md:p-2 sm:p-1 transition-all hover:bg-green-200" onClick={saveCurConversation}>Save current</button>
-                      : <></>}
-                  </div>
-              </Popup>
-              </div>
+      <div className="w-full flex transition-all ">
+          <div className="bg-slate-200 rounded-l-lg p-4">
+            <div className="p-1 sm:h-[13rem] md:h-[28rem] lg:pt-4 md:pt-2">
+                <h1 className="text-2xl">Chats</h1>
+                <p1 className="text-md ">Saved conversations</p1>
+                <div className="overflow-y-auto h-full ">
+                    <ul class="list-disc rounded-l-md mt-6">
+                    {[...conversations.keys()].map((convName, i)=>(
+                        <li className="mt-3"><button className="text-center w-full bg-slate-800 rounded-md text-white md:p-2 sm:p-1 transition-all hover:bg-green-200" value={convName} onClick={setConvoName}>{convName}</button></li>
+                    ))}
+                  </ul>    
+                </div>
+                <div>
+                  <Popup
+                  trigger={<button className=" bg-white text-sm rounded-2xl md:p-2 sm:p-1 transition-all hover:bg-green-200">Save current conversation</button>} 
+                  position="top center">
+                      <div className="flex flex-col items-center bg-white p-2 rounded-2xl">
+                      <input
+                          className="rounded h-auto p-1 text-black transition bg-slate-200 w-full" placeholder="Name of this conversation" onChange={setNewConvName} value={conversationName}/>
+                          <button className="text-left mt-3 bg-slate-200 text-sm rounded-2xl md:p-2 sm:p-1 transition-all hover:bg-green-200" onClick={saveNewConversation}>Save new</button>
+                          <button className="text-left mt-3 bg-slate-200 text-sm rounded-2xl md:p-2 sm:p-1 transition-all hover:bg-green-200" onClick={saveCurConversation}>Save current</button>
+                      </div>
+                  </Popup>
+                </div>
+            </div>
           </div>
-        <div className="p-2 w-full">
+        <div className="p-4 w-full bg-slate-600 rounded-r-lg">
           <div className="bg-slate-700 flex justify-between rounded-t-2xl p-3">
             <div className="flex ">
               <div>
