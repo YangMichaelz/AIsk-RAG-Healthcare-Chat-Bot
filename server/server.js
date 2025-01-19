@@ -36,7 +36,7 @@ const text_splitter = new RecursiveCharacterTextSplitter({
 
 const ollama = new ChatOllama({
   model: "llama3.1:latest",
-  temperature: 0.45,
+  temperature: 0.35,
   stop: [".", "?"],
 });
 
@@ -55,7 +55,8 @@ Current conversation: {convo_history}
 User: {prompt}
 Assistant:`;
 
-const PROMPT_TO_SEARCH_PROMPT = `Your job is to convert any prompt into a short and concise prompt that is used for web browsing, while using the previous prompts for context.
+const PROMPT_TO_SEARCH_PROMPT = `Your job is to simplify any prompt for web browsing while retaining its essential point and intent. Use previous prompts for context to ensure relevance. 
+Remove unnecessary details, special characters, and overly specific language, but keep key terms and phrases critical for accuracy. Prioritize clarity and brevity to optimize search engine performance.
 ===============================================================================================================================================================================
 Context: {convo_history}
 ===============================================================================================================================================================================
@@ -150,23 +151,36 @@ app.post("/api/chat", async (req, res) => {
     const userPrompt = messages[0].content;
     console.log("received prompt: " + userPrompt);
     const searchPrompt = await simplifyPrompt(userPrompt);
-
+    console.log(searchPrompt);
     promptHistory.push(new HumanMessage(userPrompt));
     promptHistory.push(new AIMessage(searchPrompt.content));
-
-    const searchResultLink = await tvly.searchContext(searchPrompt.content, {
-      includeDomains: ["https://www.healthline.com/"],
-      maxResults: 1,
-    });
-    const parsed = JSON.parse(JSON.parse(searchResultLink));
-    const url = parsed[0]?.url;
-    const searchResponse = await tvly.extract([url]);
-    var context = "";
-    if (searchResponse.results[0]["rawContent"]) {
-      context = await processData(
-        searchResponse.results[0]["rawContent"],
-        userPrompt
+    var searchResultLink = null;
+    try {
+      searchResultLink = await tvly.searchContext(
+        searchPrompt.content.toString(),
+        {
+          includeDomains: ["https://www.healthline.com/"],
+          maxResults: 1,
+        }
       );
+    } catch (e) {
+      console.log(e);
+    }
+    var searchResponse = null;
+    if (searchResultLink) {
+      const parsed = JSON.parse(JSON.parse(searchResultLink));
+      const url = parsed[0]?.url;
+      searchResponse = await tvly.extract([url]);
+    }
+
+    var context = "";
+    if (searchResponse) {
+      if (searchResponse.results[0]["rawContent"]) {
+        context = await processData(
+          searchResponse.results[0]["rawContent"],
+          userPrompt
+        );
+      }
     }
     if (context != "") {
       console.log("Context found: " + context);
@@ -193,9 +207,9 @@ app.post("/api/saveConversation", async (req, res) => {
   const userEmail = body[0].Email;
   const flag = await saveConversation(convName, convData, userEmail);
   if (flag) {
-    res.json({ reply: true });
+    console.log("Saved!");
   } else {
-    res.json({ reply: false });
+    console.log("Failed to save");
   }
 });
 // POST endpoint for loading messages from mongoDB

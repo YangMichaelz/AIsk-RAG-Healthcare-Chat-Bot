@@ -1,10 +1,10 @@
 import Header from './Header'
 import ChatArea from './ChatArea'
 import Login from './Login';
+import { useEffect } from 'react';
 import './App.css'
 
 function App() {
-
   return(
     <body>
       <div className="h-screen w-screen bg-gradient-to-r from-[#0f172a]  to-[#334155]">

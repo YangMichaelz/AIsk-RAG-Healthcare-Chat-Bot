@@ -70,17 +70,28 @@ function ChatArea(){
     }
   }
 
-  function setNewConvName(event){
+  const setNewConvName = (event) => {
     setConversationName(event.target.value);
   }
 
-  function handleOnChange(event){
+  const handleOnChange = (event) => {
       setPrompt(event.target.value);
   }
+  const submitInput = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if(!flag){
+        fetch();
+      }
+      
+    }
+  }
+  
   async function fetch(){
     if(prompt.trim() != ""){
       setFlag(true);
       setMessages(messages => [...messages, prompt]);
+      const current_conversation = localStorage.getItem("current_conversation");
       var sendAudio = new Audio("./src/assets/send.mp3");
       sendAudio.play();
       var promptToSend = prompt;
@@ -91,7 +102,12 @@ function ChatArea(){
       {headers: { 'Content-Type': 'application/json' }});
       
       const data = await response.data;
-      if(data){
+      //check if the user switches to a different convo
+      if(data && current_conversation == localStorage.getItem("current_conversation")){
+        setMessages(messages => [...messages, data.reply]);
+      }else{
+        await fetchMessages(current_conversation);
+        setMessages(messages => [...messages, promptToSend]);
         setMessages(messages => [...messages, data.reply]);
       }
       setFlag(false);
@@ -173,7 +189,7 @@ function ChatArea(){
           <input
           className="rounded h-auto p-3 text-black transition bg-slate-200 w-full" 
           id="prompt"
-          placeholder="Type your message here" onChange={handleOnChange} value={prompt}/>
+          placeholder="Type your message here" onChange={handleOnChange} value={prompt} onKeyDown={submitInput}/>
           <button className=" bg-slate-200  hover:bg-green-500 text-black font-bold py-2 px-4 ml-8 rounded duration-300 ease-in-out"
           type="button" disabled={flag} id="SendButton" onClick={fetch}>Send</button>
         </form>

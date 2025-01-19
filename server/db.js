@@ -38,7 +38,7 @@ export const addUser = async (newEmail, newUsername) => {
     });
     newUserData
       .save()
-      .then(() => console.log("Success!"))
+      .then(() => console.log("Created new user!"))
       .catch((err) => console.log(err));
     return true;
   }
